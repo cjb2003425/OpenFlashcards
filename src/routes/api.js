@@ -759,8 +759,8 @@ router.post('/words', (req, res) => {
 router.post('/words/batch', (req, res) => {
   const { lang, type, items } = req.body || {};
   const wordTypes = TYPES.filter(t => t !== 'phrase');
-  if (!lang || !wordTypes.includes(type) || !Array.isArray(items)) {
-    return res.status(400).json({ error: 'lang, valid word type, and items required.' });
+  if (!lang || !Array.isArray(items) || (type !== undefined && !wordTypes.includes(type))) {
+    return res.status(400).json({ error: 'lang, items, and an optional valid fallback type required.' });
   }
   if (items.length < 1 || items.length > 100) {
     return res.status(400).json({ error: 'Batch must contain between 1 and 100 items.' });
@@ -775,12 +775,17 @@ router.post('/words/batch', (req, res) => {
   items.forEach((item, index) => {
     const literal = typeof item?.literal === 'string' ? item.literal.trim() : '';
     const translation = typeof item?.translation === 'string' ? item.translation.trim() : '';
+    const itemType = item?.type === undefined ? (type || 'other') : item.type;
     if (!literal || !translation) {
       errors.push({ index, literal, error: 'Word and translation are required.' });
       return;
     }
     if (!/^[A-Za-z][A-Za-z' -]{0,79}$/.test(literal)) {
       errors.push({ index, literal, error: 'Invalid English word.' });
+      return;
+    }
+    if (!wordTypes.includes(itemType)) {
+      errors.push({ index, literal, error: 'Invalid word type.' });
       return;
     }
     const key = literal.toLowerCase();
@@ -791,7 +796,7 @@ router.post('/words/batch', (req, res) => {
 
     const word = {
       id: randomUUID(),
-      type,
+      type: itemType,
       literal,
       translation,
       definition: '',
@@ -800,8 +805,8 @@ router.post('/words/batch', (req, res) => {
       maxProgress: wordMaxProgress(literal),
       createdAt: new Date().toISOString()
     };
-    if (type === 'noun') word.article = '';
-    if (type === 'verb') word.conjugation = {};
+    if (itemType === 'noun') word.article = '';
+    if (itemType === 'verb') word.conjugation = {};
     words.push(word);
     known.add(key);
     saved.push({ index, word });

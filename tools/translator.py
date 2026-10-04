@@ -16,6 +16,15 @@ DICTIONARY_PATH = os.environ.get(
     "DICTIONARY_PATH", "/home/torrey/.local/share/cijian-vocab/ecdict.sqlite"
 )
 WORD_PATTERN = re.compile(r"^[A-Za-z][A-Za-z' -]{0,79}$")
+TYPE_MAP = {
+    "n": "noun",
+    "v": "verb",
+    "vi": "verb",
+    "vt": "verb",
+    "a": "adjective",
+    "adj": "adjective",
+    "adv": "adverb",
+}
 
 app = Flask(__name__)
 model_lock = threading.Lock()
@@ -45,22 +54,38 @@ def concise_meaning(translation: str) -> str:
     return "；".join(senses)[:160]
 
 
-def dictionary_meaning(word: str) -> str:
+def infer_word_types(translation: str) -> list[str]:
+    """Return recognized ECDICT part-of-speech markers in source order."""
+    types: list[str] = []
+    marker_pattern = re.compile(
+        r"(?:^|\\n|\n)\s*(adv|adj|vi|vt|v|n|a)\.", re.IGNORECASE
+    )
+    for match in marker_pattern.finditer(translation or ""):
+        word_type = TYPE_MAP[match.group(1).lower()]
+        if word_type not in types:
+            types.append(word_type)
+    return types
+
+
+def dictionary_result(word: str) -> tuple[str, tuple[str, ...]]:
     try:
         with sqlite3.connect(f"file:{DICTIONARY_PATH}?mode=ro", uri=True) as connection:
             row = connection.execute(
                 "SELECT translation FROM entries WHERE word = ?", (word,)
             ).fetchone()
     except sqlite3.Error:
-        return ""
-    return concise_meaning(row[0]) if row else ""
+        return "", ()
+    if not row:
+        return "", ()
+    translation = row[0] or ""
+    return concise_meaning(translation), tuple(infer_word_types(translation))
 
 
 @lru_cache(maxsize=512)
-def translate_word(word: str) -> str:
-    result = dictionary_meaning(word)
-    if result:
-        return result
+def translate_word(word: str) -> tuple[str, tuple[str, ...]]:
+    meaning, word_types = dictionary_result(word)
+    if meaning:
+        return meaning, word_types
     current_tokenizer, current_model = load_model()
     encoded = current_tokenizer([word], return_tensors="pt", padding=True)
     with model_lock, torch.inference_mode():
@@ -71,7 +96,8 @@ def translate_word(word: str) -> str:
     translated = current_tokenizer.batch_decode(generated, skip_special_tokens=True)[0]
     repeated = re.fullmatch(r"(.{2,}?)\1+", translated.strip())
     cleaned = repeated.group(1) if repeated else translated.strip().strip("，。；; ")
-    return cleaned if re.search(r"[\u3400-\u9fff]", cleaned) else ""
+    meaning = cleaned if re.search(r"[\u3400-\u9fff]", cleaned) else ""
+    return meaning, ()
 
 
 @app.get("/health")
@@ -85,13 +111,19 @@ def translate():
     if not WORD_PATTERN.fullmatch(word):
         return jsonify(error="请输入有效的英文单词"), 400
     try:
-        meaning = translate_word(word.lower())
+        meaning, word_types = translate_word(word.lower())
     except Exception:
         app.logger.exception("Translation failed")
         return jsonify(error="暂时无法生成释义"), 503
     if not meaning:
         return jsonify(error="没有找到合适的释义"), 404
-    return jsonify(word=word, meaning=meaning)
+    types = list(word_types)
+    return jsonify(
+        word=word,
+        meaning=meaning,
+        type=types[0] if types else "other",
+        types=types,
+    )
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ function _okMessage(el, text) {
 function renderAdd(el) {
   const ic = window.phIcon;
   window._addWordType = 'noun';
+  window._wordTypeManual = false;
   window._batchRows = [];
   window._batchKnownWords = new Set();
   const lang = currentLang();
@@ -142,16 +143,6 @@ function renderAdd(el) {
           <label>${t('batch_words_label')} <span class="required">*</span></label>
           <textarea id="batchInput" rows="10" placeholder="${t('batch_words_ph')}"></textarea>
           <small class="batch-help">${t('batch_words_help')}</small>
-        </div>
-        <div class="field-group">
-          <label>${t('add_type')}</label>
-          <select id="batchType">
-            <option value="other" selected>${t('add_type_other')}</option>
-            <option value="noun">${t('add_type_noun')}</option>
-            <option value="verb">${t('add_type_verb')}</option>
-            <option value="adjective">${t('add_type_adj')}</option>
-            <option value="adverb">${t('add_type_adv')}</option>
-          </select>
         </div>
         <div id="batchAddErr" class="alert alert-danger hidden"></div>
         <div id="batchAddOk" class="alert alert-success hidden"></div>
@@ -292,6 +283,7 @@ function renderAdd(el) {
     const el2 = document.getElementById(id);
     if (el2) el2.addEventListener('input', () => {
       if (id === 'wTranslation') delete el2.dataset.autoTranslation;
+      if (id === 'wLiteral') window._wordTypeManual = false;
       _lastEditedField = id;
       _scheduleWordTranslate();
     });
@@ -325,7 +317,12 @@ async function _translateGoogle(text, src, tgt) {
       const localRes = await fetch('/api/translate?word=' + encodeURIComponent(text));
       if (!localRes.ok) return { main: '', alternatives: [] };
       const localData = await localRes.json();
-      return { main: localData.meaning || '', alternatives: [] };
+      return {
+        main: localData.meaning || '',
+        alternatives: [],
+        wordType: localData.type || 'other',
+        wordTypes: localData.types || []
+      };
     }
     const url = new URL('https://translate.googleapis.com/translate_a/single');
     url.searchParams.set('client', 'gtx');
@@ -477,6 +474,13 @@ function _scheduleWordTranslate() {
       if (ver !== window._autoTranslateVersions[id]) return;
       if (result && result.main) {
         _applyTranslation(targetId, result.main, result.alternatives);
+        if (_lastEditedField === 'wLiteral' && result.wordType && !window._wordTypeManual) {
+          const currentLiteral = document.getElementById('wLiteral')?.value.trim().toLowerCase();
+          if (currentLiteral === sourceText.toLowerCase()) {
+            const typeBtn = document.querySelector(`#wordTypeSelector [data-type="${result.wordType}"]`);
+            if (typeBtn) selectWordType(result.wordType, typeBtn, true);
+          }
+        }
       }
       if (suggestions.length) {
         _showSuggestions(_lastEditedField, suggestions, sourceText);
@@ -673,8 +677,9 @@ function _applyPhraseTranslation(targetId, main, alternatives) {
 
 window._addWordType = 'noun';
 
-window.selectWordType = function (type, btn) {
+window.selectWordType = function (type, btn, automatic = false) {
   window._addWordType = type;
+  if (!automatic) window._wordTypeManual = true;
   document.querySelectorAll('#wordTypeSelector .type-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('nounExtras').classList.toggle('hidden', type !== 'noun');
@@ -712,6 +717,17 @@ function _batchCanInclude(row) {
   return !['duplicate', 'existing', 'invalid', 'translating'].includes(row.status);
 }
 
+function _batchTypeOptions(selected) {
+  const options = [
+    ['noun', t('add_type_noun')],
+    ['verb', t('add_type_verb')],
+    ['adjective', t('add_type_adj')],
+    ['adverb', t('add_type_adv')],
+    ['other', t('add_type_other')]
+  ];
+  return options.map(([value, label]) => `<option value="${value}" ${selected === value ? 'selected' : ''}>${label}</option>`).join('');
+}
+
 function _renderBatchPreview() {
   const container = document.getElementById('batchPreview');
   if (!container) return;
@@ -728,6 +744,7 @@ function _renderBatchPreview() {
       <span class="batch-index">${index + 1}</span>
       <input class="batch-literal" value="${esc(row.literal)}" aria-label="${t('add_tab_word')}" onchange="editBatchLiteral(${index},this.value)">
       <input class="batch-translation" value="${esc(row.translation)}" aria-label="${t('add_translation')}" placeholder="${t('batch_manual_translation')}" oninput="editBatchTranslation(${index},this.value)">
+      <select class="batch-type" aria-label="${t('add_type')}" onchange="editBatchType(${index},this.value)">${_batchTypeOptions(row.type)}</select>
       <span class="batch-status">${esc(_batchStatusLabel(row))}</span>
       <span class="batch-action">${row.status === 'failed' ? `<button class="btn btn-sm btn-secondary" onclick="retryBatchRow(${index})">${t('batch_retry')}</button>` : ''}</span>
     </div>`;
@@ -739,7 +756,7 @@ function _renderBatchPreview() {
       <div><h2>${t('batch_preview_title')}</h2><p>${t('batch_preview_summary').replace('{n}', window._batchRows.length)}</p></div>
       <button class="btn btn-primary" id="batchSaveBtn" ${includable ? '' : 'disabled'} onclick="saveBatchWords()">${t('batch_save').replace('{n}', includable)}</button>
     </div>
-    <div class="batch-table-head"><span></span><span>#</span><span>${t('add_tab_word')}</span><span>${t('add_translation')}</span><span>${t('batch_status')}</span><span></span></div>
+    <div class="batch-table-head"><span></span><span>#</span><span>${t('add_tab_word')}</span><span>${t('add_translation')}</span><span>${t('add_type')}</span><span>${t('batch_status')}</span><span></span></div>
     <div class="batch-rows">${rows}</div>
   </div>`;
 }
@@ -754,7 +771,7 @@ function _normalizeBatchRows(raw, knownWords) {
     else if (seen.has(key)) { status = 'duplicate'; include = false; }
     else if (knownWords.has(key)) { status = 'existing'; include = false; }
     seen.add(key);
-    return { literal, translation: '', status, include };
+    return { literal, translation: '', type: 'other', typeManual: false, status, include };
   });
 }
 
@@ -794,6 +811,7 @@ window.generateBatchPreview = async function () {
         try {
           const result = await api('GET', '/api/translate?word=' + encodeURIComponent(task.row.literal));
           task.row.translation = result.meaning || '';
+          if (!task.row.typeManual) task.row.type = result.type || 'other';
           task.row.status = task.row.translation ? 'ready' : 'failed';
         } catch {
           task.row.status = 'failed';
@@ -837,12 +855,21 @@ window.editBatchTranslation = function (index, value) {
   if (saveBtn) { saveBtn.textContent = t('batch_save').replace('{n}', count); saveBtn.disabled = !count; }
 };
 
+window.editBatchType = function (index, value) {
+  const row = window._batchRows[index];
+  if (!row || !['noun', 'verb', 'adjective', 'adverb', 'other'].includes(value)) return;
+  row.type = value;
+  row.typeManual = true;
+};
+
 window.editBatchLiteral = function (index, value) {
   const row = window._batchRows[index];
   if (!row) return;
   const literal = value.trim();
   row.literal = literal;
   row.translation = '';
+  row.type = 'other';
+  row.typeManual = false;
   const key = literal.toLowerCase();
   const another = window._batchRows.some((r, i) => i !== index && r.literal.trim().toLowerCase() === key);
   if (!/^[A-Za-z][A-Za-z' -]{0,79}$/.test(literal)) row.status = 'invalid';
@@ -860,6 +887,7 @@ window.retryBatchRow = async function (index) {
   try {
     const result = await api('GET', '/api/translate?word=' + encodeURIComponent(row.literal));
     row.translation = result.meaning || '';
+    if (!row.typeManual) row.type = result.type || 'other';
     row.status = row.translation ? 'ready' : 'failed';
   } catch { row.status = 'failed'; }
   row.include = _batchCanInclude(row);
@@ -882,8 +910,7 @@ window.saveBatchWords = async function () {
   try {
     const result = await api('POST', '/api/words/batch', {
       lang: currentLang(),
-      type: document.getElementById('batchType')?.value || 'other',
-      items: selectedRows.map(r => ({ literal: r.literal, translation: r.translation }))
+      items: selectedRows.map(r => ({ literal: r.literal, translation: r.translation, type: r.type || 'other' }))
     });
     const savedRowIndexes = new Set(result.saved.map(x => selectedRows[x.index]?.rowIndex).filter(i => i !== undefined));
     result.duplicates.forEach(x => {
@@ -970,6 +997,7 @@ window.submitWord = async function () {
     document.getElementById('wLiteral')?.focus();
     _purgeAutoOverlays();
     _lastEditedField = null;
+    window._wordTypeManual = false;
     document.querySelectorAll('#wordLabelPickerContainer-chips .label-pick-btn').forEach(b => { b.classList.remove('active'); b.style.background = 'transparent'; b.style.color = b.dataset.color; });
     setTimeout(() => okEl.classList.add('hidden'), 8000);
   } catch (e) {
