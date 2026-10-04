@@ -355,6 +355,7 @@ window.PH_ICONS = [
   ['mailbox', 'mailbox', '📭', false],
   ['confetti', 'confetti', '🎉', false],
   ['repeat', 'repeat', '🔁', false],
+  ['printer', 'printer', '🖨️', false],
   ['quotes', 'quotes', '💬', false]
 ];
 
@@ -478,7 +479,8 @@ window.navigate = function (page, params, _fromPopState) {
     train: renderTrain,
     settings: renderSettings,
     admin: renderAdmin,
-    notebook: renderNotebook
+    notebook: renderNotebook,
+    print: renderPrintQuiz
   };
 
   (renderers[page] || renderHome)(content, params || {});
@@ -507,7 +509,7 @@ function getPageFromHash() {
   if (hash && hash.startsWith('#/')) {
     const [pathPart, queryPart] = hash.slice(2).split('?');
     const page = pathPart.split('/')[0];
-    if (['home', 'vocabulary', 'add', 'train', 'settings', 'admin', 'notebook'].includes(page)) {
+    if (['home', 'vocabulary', 'add', 'train', 'settings', 'admin', 'notebook', 'print'].includes(page)) {
       return page;
     }
   }
@@ -823,6 +825,7 @@ function applyNavLabels() {
     navTrain: ['nav_train', 'target'],
     navAdd: ['nav_add', 'plus'],
     navNotebook: ['nav_notebook', 'book-bookmark'],
+    navPrint: ['nav_print', 'printer'],
     navSettings: ['nav_settings', 'gear'],
     adminLink: ['nav_admin', 'password']
   };
@@ -847,7 +850,7 @@ function applyNavLabels() {
 
   // Language tools: hidden for admin users (admins only manage users)
   const isAdmin = App.user && App.user.role === 'admin';
-  ['navHome', 'navVocab', 'navAdd', 'navTrain', 'navNotebook'].forEach(id => {
+  ['navHome', 'navVocab', 'navAdd', 'navTrain', 'navNotebook', 'navPrint'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = isAdmin ? 'none' : '';
   });

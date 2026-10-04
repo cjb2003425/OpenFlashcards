@@ -145,6 +145,25 @@ const TYPES = ['noun', 'verb', 'adjective', 'adverb', 'other', 'phrase'];
 
 function userId(req) { return req.user.id; }
 
+// GET /api/translate?word=hope – local ECDICT first, MarianMT fallback.
+router.get('/translate', async (req, res) => {
+  const word = String(req.query.word || '').trim();
+  if (!/^[A-Za-z][A-Za-z' -]{0,79}$/.test(word)) {
+    return res.status(400).json({ error: '请输入有效的英文单词' });
+  }
+  try {
+    const base = process.env.TRANSLATOR_URL || 'http://127.0.0.1:8092';
+    const upstream = await fetch(`${base}/translate?word=${encodeURIComponent(word)}`, {
+      signal: AbortSignal.timeout(20000)
+    });
+    const data = await upstream.json().catch(() => ({}));
+    return res.status(upstream.status).json(data);
+  } catch (err) {
+    console.error('[translate]', err.message);
+    return res.status(503).json({ error: '本地翻译服务暂时不可用' });
+  }
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // USER CONFIG / LANGUAGES
 // ─────────────────────────────────────────────────────────────────────────────
@@ -805,6 +824,56 @@ router.delete('/words/:id', (req, res) => {
   saveWords(uid, lang, words);
   deleteItemAllSpeeds(uid, lang, req.params.id);
   res.json({ ok: true });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// A4 PRINT QUIZ
+// ─────────────────────────────────────────────────────────────────────────
+
+router.get('/print-quiz', (req, res) => {
+  const { lang } = req.query;
+  if (!lang) return res.status(400).json({ error: 'lang required' });
+  const count = Math.min(30, Math.max(1, Number.parseInt(req.query.count, 10) || 30));
+  const words = getWords(userId(req), lang);
+  const unprinted = words
+    .filter(w => !w.printedAt)
+    .sort((a, b) => {
+      const ar = (a.progress || 0) / (a.maxProgress || wordMaxProgress(a.literal, a.infinitive));
+      const br = (b.progress || 0) / (b.maxProgress || wordMaxProgress(b.literal, b.infinitive));
+      return ar - br || String(a.createdAt || '').localeCompare(String(b.createdAt || ''));
+    });
+  res.json({
+    items: unprinted.slice(0, count).map(w => ({ id: w.id, translation: w.translation })),
+    total: words.length,
+    printed: words.filter(w => w.printedAt).length,
+    remaining: unprinted.length
+  });
+});
+
+router.post('/print-quiz/mark', (req, res) => {
+  const { lang, ids } = req.body || {};
+  if (!lang || !Array.isArray(ids)) return res.status(400).json({ error: 'lang and ids required' });
+  const wanted = new Set(ids);
+  const words = getWords(userId(req), lang);
+  const printedAt = new Date().toISOString();
+  let marked = 0;
+  words.forEach(w => {
+    if (wanted.has(w.id)) { w.printedAt = printedAt; marked++; }
+  });
+  saveWords(userId(req), lang, words);
+  res.json({ ok: true, marked, printedAt });
+});
+
+router.post('/print-quiz/reset', (req, res) => {
+  const { lang } = req.body || {};
+  if (!lang) return res.status(400).json({ error: 'lang required' });
+  const words = getWords(userId(req), lang);
+  let reset = 0;
+  words.forEach(w => {
+    if (w.printedAt) { delete w.printedAt; reset++; }
+  });
+  saveWords(userId(req), lang, words);
+  res.json({ ok: true, reset });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

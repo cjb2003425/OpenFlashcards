@@ -1,0 +1,20 @@
+[Unit]
+Description=OpenFlashcards Cijian LAN service
+After=network-online.target openflashcards-translator.service
+Wants=network-online.target openflashcards-translator.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/torrey/sites/openflashcards
+Environment=NODE_ENV=production
+Environment=PORT=8090
+Environment=SINGLE_USER_MODE=true
+Environment=DATA_DIR=/home/torrey/.local/share/openflashcards/data
+Environment=CONFIG_DIR=/home/torrey/.config/openflashcards
+Environment=TRANSLATOR_URL=http://127.0.0.1:8092
+ExecStart=/usr/bin/node /home/torrey/sites/openflashcards/src/server.js
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

@@ -8,7 +8,7 @@
 //   - API writes: Queue in IDB sync-queue; replay on sync
 // ─────────────────────────────────────────────────────────────────────────────
 
-const CACHE_VERSION = 'ofc-v2026.8.1';
+const CACHE_VERSION = 'ofc-v2026.8.1-cijian1';
 const STATIC_CACHE = CACHE_VERSION + '-static';
 const TTS_CACHE = CACHE_VERSION + '-tts';
 
@@ -28,6 +28,7 @@ const STATIC_ASSETS = [
   '/js/pages/train.js',
   '/js/pages/settings.js',
   '/js/pages/admin.js',
+  '/js/pages/print.js',
   '/js/offline-db.js',
   '/vendor/phosphor/regular/style.css',
   '/vendor/phosphor/regular/Phosphor.woff2',

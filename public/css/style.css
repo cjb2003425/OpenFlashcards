@@ -4012,3 +4012,35 @@ body.icon-icons.icon-color-accent .nb-context-btn .ph-fill:not(.ph-ok):not(.ph-b
   background: var(--primary-bg);
   color: var(--primary-dk);
 }
+
+/* Cijian A4 vocabulary quiz */
+.print-toolbar { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:20px; }
+.print-summary { color:var(--text-muted); margin-top:6px; }
+.print-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.printed-badge { background:var(--surface-2); color:var(--text-muted); border:1px solid var(--border); }
+.quiz-sheet { width:210mm; min-height:297mm; margin:0 auto; padding:16mm 17mm; box-sizing:border-box; background:#fff; color:#111; box-shadow:0 8px 30px rgba(0,0,0,.16); }
+.quiz-sheet-header { text-align:center; border-bottom:2px solid #222; padding-bottom:8mm; }
+.quiz-sheet-header h1 { font-size:22pt; margin:0 0 7mm; letter-spacing:.15em; }
+.quiz-sheet-header > div { font-size:11pt; display:flex; justify-content:center; gap:5mm; }
+.meta-line { display:inline-block; width:30mm; border-bottom:1px solid #222; }
+.meta-line.short { width:18mm; }
+.quiz-instruction { font-size:10.5pt; margin:6mm 0 5mm; }
+.print-question-grid { display:grid; grid-template-columns:1fr 1fr; column-gap:14mm; grid-auto-flow:column; grid-template-rows:repeat(15, 1fr); height:218mm; }
+.print-question { display:grid; grid-template-columns:8mm 1fr; grid-template-rows:auto auto; align-content:center; break-inside:avoid; font-size:11pt; min-width:0; }
+.print-number { grid-row:1 / span 2; font-weight:700; }
+.print-meaning { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.print-answer-line { display:block; height:7mm; border-bottom:1px solid #333; }
+
+@media (max-width: 900px) {
+  .print-toolbar { align-items:flex-start; flex-direction:column; }
+  .quiz-sheet { width:100%; min-height:auto; padding:8vw; }
+  .print-question-grid { height:auto; grid-auto-flow:row; grid-template-rows:none; grid-template-columns:1fr; gap:8px; }
+}
+
+@page { size:A4 portrait; margin:0; }
+@media print {
+  body { background:#fff !important; }
+  #navbar, .app-footer, .print-toolbar, .offline-banner { display:none !important; }
+  #appShell, .page-content { display:block !important; margin:0 !important; padding:0 !important; max-width:none !important; }
+  .quiz-sheet { width:210mm; height:297mm; min-height:297mm; margin:0; padding:16mm 17mm; box-shadow:none; overflow:hidden; }
+}

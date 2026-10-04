@@ -262,6 +262,7 @@ function renderAdd(el) {
   ['wLiteral', 'wTranslation'].forEach(id => {
     const el2 = document.getElementById(id);
     if (el2) el2.addEventListener('input', () => {
+      if (id === 'wTranslation') delete el2.dataset.autoTranslation;
       _lastEditedField = id;
       _scheduleWordTranslate();
     });
@@ -291,6 +292,12 @@ function _getTranslateLangs() {
 async function _translateGoogle(text, src, tgt) {
   if (!text.trim()) return { main: '', alternatives: [] };
   try {
+    if (src === 'en' && (tgt === 'zh' || tgt === 'zh-cn')) {
+      const localRes = await fetch('/api/translate?word=' + encodeURIComponent(text));
+      if (!localRes.ok) return { main: '', alternatives: [] };
+      const localData = await localRes.json();
+      return { main: localData.meaning || '', alternatives: [] };
+    }
     const url = new URL('https://translate.googleapis.com/translate_a/single');
     url.searchParams.set('client', 'gtx');
     url.searchParams.set('sl', src);
@@ -446,7 +453,7 @@ function _scheduleWordTranslate() {
         _showSuggestions(_lastEditedField, suggestions, sourceText);
       }
     } catch {}
-  }, 500);
+  }, 700);
 }
 
 function _schedulePhraseTranslate() {
@@ -572,7 +579,9 @@ function _highlightMatch(text, query) {
 function _applyTranslation(targetId, main, alternatives) {
   const el = document.getElementById(targetId);
   if (!el) return;
+  if (el.value.trim() && el.dataset.autoTranslation !== el.value) return;
   el.value = main;
+  el.dataset.autoTranslation = main;
 
   // Remove old variant container
   const old = document.getElementById(targetId + '_variants');

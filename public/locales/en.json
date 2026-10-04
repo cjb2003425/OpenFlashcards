@@ -463,5 +463,6 @@
   "notebook_expand_panel": "Expand panel",
   "notebook_unlink_confirm": "Remove this vocabulary link?",
   "notebook_delete_selected": "Delete selected",
-  "notebook_delete_selected_confirm": "You are about to delete {n} vocabulary link(s)"
+  "notebook_delete_selected_confirm": "You are about to delete {n} vocabulary link(s)",
+  "nav_print": "Print quiz"
 }

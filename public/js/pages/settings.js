@@ -92,12 +92,6 @@ async function renderSettings(el) {
       </div>
     </div>
 
-    <div class="card settings-section">
-      <h2>${ic('password')} ${t('settings_account')}</h2>
-      <p style="color:var(--text-muted);margin-bottom:16px">${t('settings_logged_as')} <strong>${esc(App.user.username)}</strong></p>
-      <button class="btn btn-secondary btn-sm" onclick="showChangePassword()">${t('settings_change_pw')}</button>
-    </div>
-
     <div class="card settings-section" id="offlineSection">
       <h2>${ic('wifi-slash')} ${t('offline_title')}</h2>
       <p style="color:var(--text-muted);margin-bottom:12px;font-size:.9rem">${t('offline_desc')}</p>

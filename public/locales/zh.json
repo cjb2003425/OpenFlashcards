@@ -463,6 +463,6 @@
   "notebook_expand_panel": "展开面板",
   "notebook_unlink_confirm": "删除此词汇链接？",
   "notebook_delete_selected": "删除所选",
-  "notebook_delete_selected_confirm": "您将要删除 {n} 个词汇链接"
+  "notebook_delete_selected_confirm": "您将要删除 {n} 个词汇链接",
+  "nav_print": "打印测验"
 }
-

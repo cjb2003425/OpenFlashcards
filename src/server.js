@@ -15,6 +15,7 @@ const { runMigration }   = require('./utils/migrate');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
+const SINGLE_USER_MODE = process.env.SINGLE_USER_MODE !== 'false';
 
 // ── Boot: ensure data dirs & default admin ──────────────────────────────────
 ensureDataDirs();
@@ -31,7 +32,7 @@ app.use('/auth', authRoutes);
 app.use('/i18n', i18nRoutes);          // public – no auth needed
 app.use('/api/offline', requireAuth, offlineRoutes);  // must be before /api
 app.use('/api', requireAuth, apiRoutes);
-app.use('/admin', requireAuth, adminRoutes);
+if (!SINGLE_USER_MODE) app.use('/admin', requireAuth, adminRoutes);
 
 // ── SPA catch-all: serve index.html for all non-API routes ─────────────────
 app.get('/*splat', (req, res) => {
@@ -46,5 +47,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ OpenFlashcards running on http://localhost:${PORT}`);
+  console.log(`✅ OpenFlashcards running on http://localhost:${PORT} (${SINGLE_USER_MODE ? 'single-user' : 'multi-user'})`);
 });

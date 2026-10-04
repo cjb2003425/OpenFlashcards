@@ -326,6 +326,7 @@ function buildWordCard(w) {
     '<div class="word-card-header">' +
     '<div>' +
     '<span class="badge badge-' + (isPhrase ? 'phrase' : w.type) + '">' + (labels[w.type] || w.type) + '</span>' +
+    (!isPhrase && w.printedAt ? ' <span class="badge printed-badge">已打印</span>' : '') +
 
     '</div>' +
     '<div class="word-actions">' +

@@ -25,7 +25,7 @@
 
 <body>
   <!-- ── LOGIN SCREEN ─────────────────────────────────────── -->
-  <div id="loginScreen" class="login-screen">
+  <div id="loginScreen" class="login-screen hidden">
     <div class="login-card">
       <img class="login-logo" src="/img/OpenFlashcards%20icon.png" alt="OpenFlashcards">
       <h1 class="login-title">OpenFlashcards</h1>
@@ -59,12 +59,13 @@
         <a class="nav-link" data-page="train" href="#" id="navTrain">Practice</a>
         <a class="nav-link" data-page="add" href="#" id="navAdd">Add</a>
         <a class="nav-link" data-page="notebook" href="#" id="navNotebook">Notebook</a>
+        <a class="nav-link" data-page="print" href="#" id="navPrint">打印测验</a>
         <a class="nav-link" data-page="settings" href="#" id="navSettings">Settings</a>
         <a class="nav-link" id="adminLink" data-page="admin" href="#" style="display:none">Admin</a>
         <button class="btn-icon dark-toggle" id="darkToggle" title="Toggle dark mode"></button>
         <button class="btn-icon sync-offline-btn" id="syncOfflineBtn" title="Sync offline data" style="display:none"
           onclick="window._triggerOfflineSync && window._triggerOfflineSync()"></button>
-        <button class="btn-icon" id="logoutBtn" title="Logout"></button>
+        <button class="btn-icon" id="logoutBtn" title="Logout" style="display:none"></button>
       </div>
     </nav>
 
@@ -102,6 +103,7 @@
   <script src="/js/pages/settings.js"></script>
   <script src="/js/pages/admin.js"></script>
   <script src="/js/pages/notebook.js"></script>
+  <script src="/js/pages/print.js"></script>
   <script src="/js/tts.js"></script>
   <script>
     if ('serviceWorker' in navigator) {

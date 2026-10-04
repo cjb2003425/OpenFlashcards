@@ -1,0 +1,15 @@
+[Unit]
+Description=OpenFlashcards local English-Chinese translator
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/torrey/sites/openflashcards
+Environment=PORT=8092
+Environment=DICTIONARY_PATH=/home/torrey/.local/share/cijian-vocab/ecdict.sqlite
+ExecStart=/home/torrey/miniconda3/bin/gunicorn --bind 127.0.0.1:8092 --workers 1 --threads 4 --timeout 60 tools.translator:app
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

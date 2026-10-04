@@ -5,6 +5,7 @@ const path = require('path');
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data');
 const CONFIG_DIR = process.env.CONFIG_DIR || path.join(__dirname, '..', '..', 'config');
 const USERS_FILE = path.join(CONFIG_DIR, 'users.json');
+const SINGLE_USER_MODE = process.env.SINGLE_USER_MODE !== 'false';
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 function ensureDataDirs() {
@@ -12,8 +13,20 @@ function ensureDataDirs() {
     if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
   });
 
-  // Bootstrap users.json with admin if missing
+  // Bootstrap users.json. The Cijian deployment is single-user by default.
   if (!fs.existsSync(USERS_FILE)) {
+    if (SINGLE_USER_MODE) {
+      writeJson(USERS_FILE, {
+        local: {
+          id: 'local',
+          username: '本机用户',
+          role: 'user',
+          createdAt: new Date().toISOString()
+        }
+      });
+      console.log('👤 Single-user mode enabled.');
+      return;
+    }
     const bcrypt = require('bcryptjs');
     const { randomUUID } = require('crypto');
     const adminId = randomUUID();
@@ -88,11 +101,19 @@ function userConfigFile(userId) {
 // ── User config (languages, prefs) ──────────────────────────────────────────
 function getUserConfig(userId) {
   return readJson(userConfigFile(userId), {
-    nativeLang: 'en',
-    targetLangs: [],
-    currentLang: null,
-    uiLang: 'en',
-    darkMode: true,
+    nativeLang: SINGLE_USER_MODE ? 'zh' : 'en',
+    targetLangs: SINGLE_USER_MODE ? [{
+      isoCode: 'en',
+      name: 'English',
+      flag: '🇬🇧',
+      nativeName: '英语',
+      tenses: [{ nativeName: '现在时', targetName: 'Present' }]
+    }] : [],
+    currentLang: SINGLE_USER_MODE ? 'en' : null,
+    uiLang: SINGLE_USER_MODE ? 'zh' : 'en',
+    darkMode: false,
+    autoTranslate: SINGLE_USER_MODE,
+    suggestions: false,
     hideZeroStats: false,
     accentColor: '#439b00',
     iconStyle: 'emoji',
