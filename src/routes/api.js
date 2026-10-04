@@ -725,14 +725,15 @@ router.post('/words', (req, res) => {
   if (!TYPES.includes(type))
     return res.status(400).json({ error: `type must be one of: ${TYPES.join(', ')}` });
 
+  const cleanLiteral = literal.trim();
   const words = getWords(userId(req), lang);
-  if (words.find(w => w.id === literal))
+  if (words.find(w => String(w.literal || '').trim().toLowerCase() === cleanLiteral.toLowerCase()))
     return res.status(409).json({ error: 'Word already exists.' });
 
   const word = {
     id: randomUUID(),
     type,
-    literal: literal.trim(),
+    literal: cleanLiteral,
     translation: translation.trim(),
     definition: definition ? definition.trim() : '',
     langCode: lang,
@@ -752,6 +753,62 @@ router.post('/words', (req, res) => {
   words.push(word);
   saveWords(userId(req), lang, words);
   res.status(201).json({ ok: true, word });
+});
+
+// POST /api/words/batch – save up to 100 independently validated words.
+router.post('/words/batch', (req, res) => {
+  const { lang, type, items } = req.body || {};
+  const wordTypes = TYPES.filter(t => t !== 'phrase');
+  if (!lang || !wordTypes.includes(type) || !Array.isArray(items)) {
+    return res.status(400).json({ error: 'lang, valid word type, and items required.' });
+  }
+  if (items.length < 1 || items.length > 100) {
+    return res.status(400).json({ error: 'Batch must contain between 1 and 100 items.' });
+  }
+
+  const words = getWords(userId(req), lang);
+  const known = new Set(words.map(w => String(w.literal || '').trim().toLowerCase()).filter(Boolean));
+  const saved = [];
+  const duplicates = [];
+  const errors = [];
+
+  items.forEach((item, index) => {
+    const literal = typeof item?.literal === 'string' ? item.literal.trim() : '';
+    const translation = typeof item?.translation === 'string' ? item.translation.trim() : '';
+    if (!literal || !translation) {
+      errors.push({ index, literal, error: 'Word and translation are required.' });
+      return;
+    }
+    if (!/^[A-Za-z][A-Za-z' -]{0,79}$/.test(literal)) {
+      errors.push({ index, literal, error: 'Invalid English word.' });
+      return;
+    }
+    const key = literal.toLowerCase();
+    if (known.has(key)) {
+      duplicates.push({ index, literal });
+      return;
+    }
+
+    const word = {
+      id: randomUUID(),
+      type,
+      literal,
+      translation,
+      definition: '',
+      langCode: lang,
+      progress: 0,
+      maxProgress: wordMaxProgress(literal),
+      createdAt: new Date().toISOString()
+    };
+    if (type === 'noun') word.article = '';
+    if (type === 'verb') word.conjugation = {};
+    words.push(word);
+    known.add(key);
+    saved.push({ index, word });
+  });
+
+  if (saved.length) saveWords(userId(req), lang, words);
+  res.status(saved.length ? 201 : 200).json({ ok: true, saved, duplicates, errors });
 });
 
 // PUT /api/words/:id

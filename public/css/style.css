@@ -1267,6 +1267,45 @@ img {
   margin-bottom: 0 !important;
 }
 
+/* ── BATCH ADD ─────────────────────────────────────────────────── */
+.batch-add-card select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+}
+.batch-help { color:var(--text-faint); font-size:.8rem; }
+.batch-progress { margin:12px 0; color:var(--primary); font-weight:700; text-align:center; }
+.batch-preview-card { margin-top:20px; overflow:hidden; }
+.batch-preview-header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px; }
+.batch-preview-header h2 { margin:0 0 4px; }
+.batch-preview-header p { color:var(--text-muted); font-size:.85rem; }
+.batch-table-head, .batch-row {
+  display:grid;
+  grid-template-columns:28px 34px minmax(140px,1fr) minmax(180px,1.35fr) 120px 64px;
+  gap:8px;
+  align-items:center;
+}
+.batch-table-head { padding:0 8px 8px; color:var(--text-faint); font-size:.75rem; font-weight:700; }
+.batch-row { padding:8px; border-top:1px solid var(--border); }
+.batch-row input[type="text"], .batch-row .batch-literal, .batch-row .batch-translation { min-width:0; padding:8px 10px; }
+.batch-include { display:flex; justify-content:center; }
+.batch-index { color:var(--text-faint); font-size:.8rem; text-align:center; }
+.batch-status { font-size:.76rem; font-weight:700; color:var(--text-muted); }
+.batch-status-ready .batch-status { color:var(--success); }
+.batch-status-failed .batch-status, .batch-status-invalid .batch-status { color:var(--danger); }
+.batch-status-duplicate .batch-status, .batch-status-existing .batch-status { color:var(--warning); }
+
+@media (max-width: 760px) {
+  .batch-preview-header { align-items:flex-start; flex-direction:column; }
+  .batch-table-head { display:none; }
+  .batch-row { grid-template-columns:28px 28px 1fr 64px; }
+  .batch-row .batch-literal, .batch-row .batch-translation { grid-column:3 / 5; }
+  .batch-status { grid-column:3; }
+}
+
 /* ── AUTO-TRANSLATE VARIANTS ────────────────────────────────── */
 .auto-translate-variants {
   margin-top: 6px;
